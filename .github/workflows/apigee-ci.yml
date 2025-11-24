@@ -184,4 +184,4 @@ jobs:
             -Dsa=../../sa.json \
             -Dorg=${APIGEE_ORG} \
             -Ddeployment.suffix=${APIGEE_DEPLOYMENT_SUFFIX} \
-            -DgoogleTokenEmail=${{ matrix.service_account }}
+            -DgoogleTokenEmail=${{ matrix.service_account }} -e -X
