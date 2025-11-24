@@ -14,5 +14,12 @@
   <HTTPTargetConnection>
     <Properties/>
     <URL>https://teste-603325371846.us-west1.run.app/</URL>
+    <Authentication>
+      <GoogleAccessToken>
+        <Scopes>
+          <Scope>https://www.googleapis.com/auth/cloud-platform</Scope>
+        </Scopes>
+      </GoogleAccessToken>
+    </Authentication>
   </HTTPTargetConnection>
 </TargetEndpoint>
