@@ -39,7 +39,7 @@ jobs:
             service_account: proxy-airports-cicd@SEU_PROJETO.iam.gserviceaccount.com
 
           - proxy: crud-run
-            service_account: apigee-sa@vpc-host-prod-422816.iam.gserviceaccount.com
+            service_account: sa-apigee@backup-felipe-secchi.iam.gserviceaccount.com
 
           # - proxy: outro-proxy
           #   service_account: outra-sa@SEU_PROJETO.iam.gserviceaccount.com
