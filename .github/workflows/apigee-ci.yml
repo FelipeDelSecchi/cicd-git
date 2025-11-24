@@ -35,7 +35,7 @@ jobs:
       matrix:
         include:
           - proxy: airports-cicd-v1
-            
+            # TODO: ajustar para a SA real ou usar secret
             service_account: proxy-airports-cicd@SEU_PROJETO.iam.gserviceaccount.com
 
           - proxy: crud-run
@@ -46,18 +46,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # necessário para conseguir fazer diff entre commits
 
       # Detecta se houve alteração dentro de EdgeConfig/
       - name: Detect EdgeConfig changes
         id: edgeconfig
         run: |
           echo ">>> Verificando alterações em EdgeConfig/"
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD || echo "NO_DIFF")
+          BEFORE_SHA="${{ github.event.before }}"
+          CURRENT_SHA="${{ github.sha }}"
+
+          echo "Comparando diff entre $BEFORE_SHA e $CURRENT_SHA"
+
+          CHANGED_FILES=$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" || echo "NO_DIFF")
           echo "Arquivos alterados:"
           echo "$CHANGED_FILES"
 
-          if [ "$CHANGED_FILES" = "NO_DIFF" ]; then
-            echo "Sem diff (provavelmente primeiro run). Marcando changed=true."
+          # Se não conseguimos calcular diff ou não houve nenhum arquivo,
+          # consideramos changed=true (primeiro push / histórico raso)
+          if [ "$CHANGED_FILES" = "NO_DIFF" ] || [ -z "$CHANGED_FILES" ]; then
+            echo "Sem diff confiável. Marcando EdgeConfig changed=true."
             echo "changed=true" >> $GITHUB_OUTPUT
           elif echo "$CHANGED_FILES" | grep -q '^EdgeConfig/'; then
             echo "EdgeConfig alterado."
@@ -72,12 +81,18 @@ jobs:
         id: proxychanges
         run: |
           echo ">>> Verificando alterações para o proxy '${{ matrix.proxy }}'"
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD || echo "NO_DIFF")
+
+          BEFORE_SHA="${{ github.event.before }}"
+          CURRENT_SHA="${{ github.sha }}"
+
+          echo "Comparando diff entre $BEFORE_SHA e $CURRENT_SHA"
+
+          CHANGED_FILES=$(git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" || echo "NO_DIFF")
           echo "Arquivos alterados:"
           echo "$CHANGED_FILES"
 
-          if [ "$CHANGED_FILES" = "NO_DIFF" ]; then
-            echo "Sem diff (provavelmente primeiro run). Marcando changed=true."
+          if [ "$CHANGED_FILES" = "NO_DIFF" ] || [ -z "$CHANGED_FILES" ]; then
+            echo "Sem diff confiável (primeiro push / histórico raso). Marcando proxy changed=true."
             echo "changed=true" >> $GITHUB_OUTPUT
           elif echo "$CHANGED_FILES" | grep -q "proxies/${{ matrix.proxy }}/"; then
             echo "Proxy '${{ matrix.proxy }}' teve alteração."
@@ -128,15 +143,17 @@ jobs:
       - name: Generate SA key file
         if: env.API_VERSION == 'googleapi'
         run: | 
-          echo "${GCP_SERVICE_ACCOUNT}" > sa.json
+          printf '%s' "$GCP_SERVICE_ACCOUNT" > sa.json
+          echo "Arquivo sa.json gerado:"
+          ls -l sa.json
 
-      # # Deploy de EdgeConfig (só se API_VERSION == googleapi E EdgeConfig tiver mudado)
+      # (Opcional) Deploy de EdgeConfig desabilitado por enquanto
       # - name: mvn deploy config xhybrid
       #   if: env.API_VERSION == 'googleapi' && steps.edgeconfig.outputs.changed == 'true'
       #   working-directory: ./EdgeConfig
       #   run: |
       #     sed -i "s/target_apigee_env/${APIGEE_ENV}/g" edge.json
-
+      #
       #     mvn install -q -Pgoogleapi \
       #       -Dapigee.org=${APIGEE_ORG} \
       #       -Dapigee.env=${APIGEE_ENV} \
@@ -179,9 +196,10 @@ jobs:
         if: env.API_VERSION == 'googleapi' && steps.proxychanges.outputs.changed == 'true'
         working-directory: proxies/${{ matrix.proxy }}
         run: |
+          ls -l ../../sa.json || echo "ATENÇÃO: ../../sa.json não encontrado"
           mvn apigee-enterprise:deploy -q -Pgoogleapi \
             -Denv=${APIGEE_ENV} \
             -Dsa=../../sa.json \
             -Dorg=${APIGEE_ORG} \
             -Ddeployment.suffix=${APIGEE_DEPLOYMENT_SUFFIX} \
-            -DgoogleTokenEmail=${{ matrix.service_account }} -e -X
+            -DgoogleTokenEmail=${{ matrix.service_account }}
