@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<APIProxy revision="1" name="cloud-run">
+  <DisplayName/>
+  <Description/>
+  <CreatedAt>1764015366468</CreatedAt>
+  <LastModifiedAt>1764015490161</LastModifiedAt>
+  <BasePaths>/cloud-run</BasePaths>
+  <ProxyEndpoints>
+    <ProxyEndpoint>default</ProxyEndpoint>
+  </ProxyEndpoints>
+  <TargetEndpoints>
+    <TargetEndpoint>default</TargetEndpoint>
+  </TargetEndpoints>
+</APIProxy>
